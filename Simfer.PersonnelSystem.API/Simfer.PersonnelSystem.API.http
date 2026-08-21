@@ -1,0 +1,6 @@
+@Simfer.PersonnelSystem.API_HostAddress = http://localhost:5152
+
+GET {{Simfer.PersonnelSystem.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
