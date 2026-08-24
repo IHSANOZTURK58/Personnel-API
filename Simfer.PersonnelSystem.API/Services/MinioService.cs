@@ -26,7 +26,6 @@ namespace Simfer.PersonnelSystem.API.Services
             string extension = Path.GetExtension(file.FileName);
             string newFileName = Guid.NewGuid().ToString() + extension;
                 
-            // Dosyayı MinIO'ya fırlatıyoruz
             using var stream = file.OpenReadStream();
             var putObjectArgs = new PutObjectArgs()
                 .WithBucket(_bucketName)
@@ -37,17 +36,14 @@ namespace Simfer.PersonnelSystem.API.Services
 
             await _minioClient.PutObjectAsync(putObjectArgs);
 
-            // Veritabanına (SQL) kaydetmek üzere sadece bu yeni dosya adını (Örn: 5f4d2...a3.jpg) geri dönüyoruz.
             return newFileName;
         }
-
-        // 2. GÜVENLİ LİNK ÜRETME METODU (1 Saatlik Bilet)
         public async Task<string> GetFileUrlAsync(string fileName)
         {
             var args = new PresignedGetObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(fileName)
-                .WithExpiry(60 * 60); // 60 saniye * 60 dakika = 1 Saat geçerli link!
+                .WithExpiry(60 * 60); 
 
             return await _minioClient.PresignedGetObjectAsync(args);
         }

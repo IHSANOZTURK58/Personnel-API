@@ -58,7 +58,23 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-            return Ok(new { Token = tokenString });
+            // --- LOGLAMA BAŞLANGIÇ ---
+            var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
+            {
+                UserId = user.Id, // Veritabanından çektiğimiz kullanıcının ID'si
+                ActionType = "Sisteme Giriş",
+                Details = $"{user.Username} adlı kullanıcı sisteme başarıyla giriş yaptı."
+            };
+            _context.UserHistories.Add(historyRecord);
+            await _context.SaveChangesAsync();
+            // --- LOGLAMA BİTİŞ ---
+
+            return Ok(new
+            {
+                Token = tokenString,
+                Role = user.Role != null ? user.Role.Name : "Atanmadı", // Eklediğimiz kısım
+                FullName = $"{user.FirstName} {user.LastName}" // Ekstra tüyo: Ön yüzde "Hoş geldin Ahmet" yazdırmak için bunu da dönmek çok klas olur!
+            });
         }
     }
 
