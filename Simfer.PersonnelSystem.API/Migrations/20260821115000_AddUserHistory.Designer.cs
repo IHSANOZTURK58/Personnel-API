@@ -15,7 +15,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
     [Migration("20260821115000_AddUserHistory")]
     partial class AddUserHistory
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

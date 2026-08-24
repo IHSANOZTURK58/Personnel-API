@@ -47,8 +47,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 _context.FaultyProducts.Add(newFaultyProduct);
                 await _context.SaveChangesAsync();
 
-                // --- LOGLAMA BAŞLANGIÇ ---
-                // İstek atan kişinin Token'ından ID'sini alıyoruz
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
                 if (!string.IsNullOrEmpty(currentUserId))
@@ -62,7 +60,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     _context.UserHistories.Add(historyRecord);
                     await _context.SaveChangesAsync();
                 }
-                // --- LOGLAMA BİTİŞ ---
 
                 return Ok(new
                 {
@@ -77,14 +74,13 @@ namespace Simfer.PersonnelSystem.API.Controllers
         }
 
         [HttpGet("get-image-url/{fileName}")]
-        [Authorize] // EKLENDİ: Kimin resme baktığını bilmek için token zorunlu kılındı
+        [Authorize] 
         public async Task<IActionResult> GetImageUrl(string fileName)
         {
             try
             {
                 string url = await _minioService.GetFileUrlAsync(fileName);
 
-                // --- LOGLAMA BAŞLANGIÇ ---
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (int.TryParse(currentUserId, out int parsedUserId))
                 {
@@ -97,7 +93,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     _context.UserHistories.Add(historyRecord);
                     await _context.SaveChangesAsync();
                 }
-                // --- LOGLAMA BİTİŞ ---
 
                 return Ok(new { TemporaryUrl = url });
             }
@@ -117,7 +112,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     .OrderByDescending(p => p.CreatedDate)
                     .ToListAsync();
 
-                // --- LOGLAMA BAŞLANGIÇ ---
                 var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (int.TryParse(currentUserId, out int parsedUserId))
                 {
@@ -130,7 +124,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     _context.UserHistories.Add(historyRecord);
                     await _context.SaveChangesAsync();
                 }
-                // --- LOGLAMA BİTİŞ ---
 
                 return Ok(products);
             }

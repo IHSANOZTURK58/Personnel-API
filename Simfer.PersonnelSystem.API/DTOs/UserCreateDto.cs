@@ -16,7 +16,7 @@ namespace Simfer.PersonnelSystem.API.DTOs
         [Required(ErrorMessage = "Şifre zorunludur.")]
         public string Password { get; set; }
 
-        [Required(ErrorMessage = "Kullanıcı rolü (Yetki) zorunludur.")]
-        public int RoleId { get; set; }
+        [Required(ErrorMessage = "Kullanıcı rolü (Yetki adı) zorunludur.")]
+        public string RoleName { get; set; }
     }
 }

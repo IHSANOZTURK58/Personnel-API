@@ -4,10 +4,8 @@
 
 namespace Simfer.PersonnelSystem.API.Migrations
 {
-    /// <inheritdoc />
     public partial class MoveBarcodeToProduct : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
@@ -27,7 +25,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                 defaultValue: "");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

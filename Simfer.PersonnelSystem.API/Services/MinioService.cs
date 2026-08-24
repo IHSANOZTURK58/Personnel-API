@@ -19,10 +19,8 @@ namespace Simfer.PersonnelSystem.API.Services
                 .Build();
         }
 
-        // 1. FOTOĞRAF YÜKLEME METODU
         public async Task<string> UploadFileAsync(IFormFile file)
         {
-            // Aynı isimde iki dosya yüklenip birbirini ezmesin diye rastgele eşsiz bir isim (Guid) üretiyoruz.
             string extension = Path.GetExtension(file.FileName);
             string newFileName = Guid.NewGuid().ToString() + extension;
                 

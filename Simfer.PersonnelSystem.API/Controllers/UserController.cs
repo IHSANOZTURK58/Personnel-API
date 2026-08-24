@@ -11,15 +11,14 @@ namespace Simfer.PersonnelSystem.API.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        // VERİTABANI BAĞLANTISI
-        private readonly AppDbContext _context; // Kendi DbContext adını buraya yazmalısın!
+
+        private readonly AppDbContext _context; 
 
         public UserController(AppDbContext context)
         {
             _context = context;
         }
 
-        // 1. PROFİL SAYFASI (Herkes Girebilir)
         [HttpGet("profil")]
         [Authorize]
         public IActionResult GetProfile()
@@ -43,7 +42,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
             });
         }
 
-        // 2. KİLİTLİ SAYFA (Sadece Adminler Girebilir - Gerçek SQL'den Çeker)
         [HttpGet("Employee-listesi")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> GetPersonnelList()
@@ -59,7 +57,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 })
                 .ToListAsync();
 
-            // --- LOGLAMA BAŞLANGIÇ ---
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (int.TryParse(currentUserId, out int parsedUserId))
             {
@@ -72,7 +69,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 _context.UserHistories.Add(historyRecord);
                 await _context.SaveChangesAsync();
             }
-            // --- LOGLAMA BİTİŞ ---
 
             return Ok(new
             {
@@ -81,16 +77,17 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 Data = personnelList
             });
         }
-        
+
         [HttpPost("add-user")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> AddUser([FromBody] UserCreateDto request)
         {
-            // İsteği atan kişinin rolünü ve ID'sini okuyoruz (ID'yi tarihçe için kullanacağız)
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role);
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (currentUserRole == "Manager" && request.RoleId != 3)
+            // 1. DÜZELTME: Artık ID değil, İsim üzerinden yetki kontrolü yapıyoruz.
+            // Manager sadece "Employee" rolünde kişi ekleyebilir.
+            if (currentUserRole == "Manager" && request.RoleName != "Employee")
             {
                 return StatusCode(403, "Yetki Hatası: Yöneticiler (Manager) sadece Personel (Employee) ekleyebilir.");
             }
@@ -101,28 +98,33 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return BadRequest("Bu kullanıcı adı zaten sistemde kayıtlı.");
             }
 
+            // 2. DÜZELTME: Postman'den gelen rol adını (Örn: "Admin") veritabanında arıyoruz.
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == request.RoleName);
+            if (role == null)
+            {
+                return BadRequest($"'{request.RoleName}' adında bir yetki bulunamadı. Lütfen geçerli bir rol girin (Örn: Admin, Manager, Employee).");
+            }
+
+            // 3. DÜZELTME: Yeni kullanıcıya metin olan RoleName'i değil, bulduğumuz RoleId'yi atıyoruz.
             var newUser = new Simfer.PersonnelSystem.API.Entities.User
             {
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Username = request.Username,
                 PasswordHash = request.Password,
-                RoleId = request.RoleId
+                RoleId = role.Id // İŞTE KRİTİK NOKTA BURASI
             };
 
-            // 1. Yeni kullanıcıyı tabloya eklemeye hazırla
             _context.Users.Add(newUser);
 
-            // 2. YENİ: Tarihçe (History) defterine de bir kayıt düş
             var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
             {
-                UserId = int.Parse(currentUserId), // Eklemeyi yapan kişinin ID'si
+                UserId = int.Parse(currentUserId),
                 ActionType = "Kullanıcı Ekleme",
                 Details = $"'{request.Username}' kullanıcı adıyla yeni bir personel sisteme eklendi."
             };
             _context.UserHistories.Add(historyRecord);
 
-            // 3. Her iki işlemi de tek seferde veritabanına kaydet!
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -141,7 +143,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return NotFound("Silinmek istenen kullanıcı bulunamadı.");
             }
 
-            // İsteği atan kişinin (Token sahibinin) bilgilerini al
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role);
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -155,19 +156,16 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return StatusCode(403, "Yetki Hatası: Yöneticiler (Manager) sadece Personel (Employee) silebilir.");
             }
 
-            // 1. Adamı veritabanından silinmeye hazırla
             _context.Users.Remove(userToDelete);
 
-            // 2. YENİ: Tarihçe (History) defterine silindiğine dair kayıt düş
             var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
             {
-                UserId = int.Parse(currentUserId), // Silme işlemini yapan yöneticinin ID'si
+                UserId = int.Parse(currentUserId), 
                 ActionType = "Kullanıcı Silme",
                 Details = $"{userToDelete.FirstName} {userToDelete.LastName} ({userToDelete.Username}) adlı kullanıcı sistemden silindi."
             };
             _context.UserHistories.Add(historyRecord);
 
-            // 3. Hem silme işlemini hem de tarihçe kaydını tek seferde veritabanına işle
             await _context.SaveChangesAsync();
 
             return Ok(new
