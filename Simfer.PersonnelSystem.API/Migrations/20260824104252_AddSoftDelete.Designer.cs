@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Simfer.PersonnelSystem.API.Data;
 
@@ -11,9 +12,11 @@ using Simfer.PersonnelSystem.API.Data;
 namespace Simfer.PersonnelSystem.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824104252_AddSoftDelete")]
+    partial class AddSoftDelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -55,12 +58,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("FaultyProducts");
                 });
@@ -144,17 +142,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("UserHistories");
-                });
-
-            modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.FaultyProduct", b =>
-                {
-                    b.HasOne("Simfer.PersonnelSystem.API.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.User", b =>

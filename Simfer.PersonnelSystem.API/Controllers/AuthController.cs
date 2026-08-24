@@ -14,7 +14,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
-                
+
         public AuthController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
@@ -24,21 +24,23 @@ namespace Simfer.PersonnelSystem.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            // 1. DEĞİŞİKLİK: Veritabanında artık sadece kullanıcı adını arıyoruz. 
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Username == request.Username && u.PasswordHash == request.Password);
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            if (user == null)
+            // 2. DEĞİŞİKLİK: Kullanıcı yoksa VEYA girilen düz şifre, veritabanındaki hash'lenmiş şifreyle uyuşmuyorsa yetkisiz giriş!
+            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized("Kullanıcı adı veya şifre hatalı.");
             }
 
             var claims = new List<Claim>
-{
-    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-    new Claim("Username", user.Username), 
-    new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
-};
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim("Username", user.Username),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
+            };
 
             if (user.Role != null)
             {
@@ -70,8 +72,8 @@ namespace Simfer.PersonnelSystem.API.Controllers
             return Ok(new
             {
                 Token = tokenString,
-                Role = user.Role != null ? user.Role.Name : "Atanmadı", 
-                FullName = $"{user.FirstName} {user.LastName}" 
+                Role = user.Role != null ? user.Role.Name : "Atanmadı",
+                FullName = $"{user.FirstName} {user.LastName}"
             });
         }
     }

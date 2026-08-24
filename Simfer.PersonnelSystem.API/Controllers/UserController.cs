@@ -12,7 +12,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
     public class UserController : ControllerBase
     {
 
-        private readonly AppDbContext _context; 
+        private readonly AppDbContext _context;
 
         public UserController(AppDbContext context)
         {
@@ -85,7 +85,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role);
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // 1. DÜZELTME: Artık ID değil, İsim üzerinden yetki kontrolü yapıyoruz.
             // Manager sadece "Employee" rolünde kişi ekleyebilir.
             if (currentUserRole == "Manager" && request.RoleName != "Employee")
             {
@@ -98,21 +97,21 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return BadRequest("Bu kullanıcı adı zaten sistemde kayıtlı.");
             }
 
-            // 2. DÜZELTME: Postman'den gelen rol adını (Örn: "Admin") veritabanında arıyoruz.
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == request.RoleName);
             if (role == null)
             {
                 return BadRequest($"'{request.RoleName}' adında bir yetki bulunamadı. Lütfen geçerli bir rol girin (Örn: Admin, Manager, Employee).");
             }
 
-            // 3. DÜZELTME: Yeni kullanıcıya metin olan RoleName'i değil, bulduğumuz RoleId'yi atıyoruz.
             var newUser = new Simfer.PersonnelSystem.API.Entities.User
             {
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Username = request.Username,
-                PasswordHash = request.Password,
-                RoleId = role.Id // İŞTE KRİTİK NOKTA BURASI
+
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+
+                RoleId = role.Id
             };
 
             _context.Users.Add(newUser);
@@ -133,6 +132,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 Message = "Yeni kullanıcı sisteme başarıyla eklendi."
             });
         }
+
         [HttpDelete("delete-user/{id}")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> DeleteUser(int id)
@@ -160,7 +160,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
             {
-                UserId = int.Parse(currentUserId), 
+                UserId = int.Parse(currentUserId),
                 ActionType = "Kullanıcı Silme",
                 Details = $"{userToDelete.FirstName} {userToDelete.LastName} ({userToDelete.Username}) adlı kullanıcı sistemden silindi."
             };
@@ -174,8 +174,5 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 Message = "Kullanıcı sistemden başarıyla silindi."
             });
         }
-
-
-
     }
 }

@@ -32,6 +32,13 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             try
             {
+                var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (!int.TryParse(currentUserIdStr, out int parsedUserId))
+                {
+                    return Unauthorized("Güvenlik İhlali: Geçerli bir kullanıcı kimliği bulunamadı.");
+                }
+
                 string generatedFileName = await _minioService.UploadFileAsync(request.File);
 
                 var newFaultyProduct = new FaultyProduct
@@ -41,25 +48,22 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     DefectDescription = request.DefectDescription,
                     ImageFileName = generatedFileName,
                     CreatedDate = DateTime.Now,
-                    IsResolved = false
+                    IsResolved = false,
+
+                    UserId = parsedUserId
                 };
 
                 _context.FaultyProducts.Add(newFaultyProduct);
                 await _context.SaveChangesAsync();
 
-                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                if (!string.IsNullOrEmpty(currentUserId))
+                var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
                 {
-                    var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
-                    {
-                        UserId = int.Parse(currentUserId),
-                        ActionType = "Hatalı Ürün Kaydı",
-                        Details = $"{request.BarcodeNumber} barkodlu '{request.ProductName}' hatalı ürün olarak sisteme eklendi."
-                    };
-                    _context.UserHistories.Add(historyRecord);
-                    await _context.SaveChangesAsync();
-                }
+                    UserId = parsedUserId,
+                    ActionType = "Hatalı Ürün Kaydı",
+                    Details = $"{request.BarcodeNumber} barkodlu '{request.ProductName}' hatalı ürün olarak sisteme eklendi."
+                };
+                _context.UserHistories.Add(historyRecord);
+                await _context.SaveChangesAsync();
 
                 return Ok(new
                 {
@@ -108,12 +112,26 @@ namespace Simfer.PersonnelSystem.API.Controllers
         {
             try
             {
+                // Entity'yi doğrudan değil, sadece istediğimiz alanları seçerek (Select) arayüze gönderiyoruz:
                 var products = await _context.FaultyProducts
+                    .Include(p => p.User)
                     .OrderByDescending(p => p.CreatedDate)
+                    .Select(p => new
+                    {
+                        p.Id,
+                        p.ProductName,
+                        p.BarcodeNumber,
+                        p.DefectDescription,
+                        p.ImageFileName,
+                        p.CreatedDate,
+                        p.IsResolved,
+                        // Arayüze sadece personelin Ad ve Soyadını gönderiyoruz, şifre ve diğer detaylar gizli kalıyor:
+                        ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor"
+                    })
                     .ToListAsync();
 
-                var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (int.TryParse(currentUserId, out int parsedUserId))
+                var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(currentUserIdStr, out int parsedUserId))
                 {
                     var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
                     {

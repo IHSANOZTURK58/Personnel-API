@@ -26,6 +26,9 @@ namespace Simfer.PersonnelSystem.API.Entities
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
+        public int UserId { get; set; }
+
+        public User User { get; set; }
         public bool IsResolved { get; set; } = false;
     }
 }
