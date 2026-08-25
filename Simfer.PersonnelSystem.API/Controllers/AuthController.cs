@@ -24,12 +24,10 @@ namespace Simfer.PersonnelSystem.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // 1. DEĞİŞİKLİK: Veritabanında artık sadece kullanıcı adını arıyoruz. 
             var user = await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // 2. DEĞİŞİKLİK: Kullanıcı yoksa VEYA girilen düz şifre, veritabanındaki hash'lenmiş şifreyle uyuşmuyorsa yetkisiz giriş!
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized("Kullanıcı adı veya şifre hatalı.");

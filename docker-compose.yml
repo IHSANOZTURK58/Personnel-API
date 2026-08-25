@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  simfer-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  simfer-minio:
+    image: minio/minio
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9005:9000"
+      - "9006:9001"
+    volumes:
+      - minio_data:/data
+
+  simfer-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=simfer-db;Database=SimferPersonnelDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - Minio__Endpoint=simfer-minio:9000
+    depends_on:
+      - simfer-db
+      - simfer-minio
+
+volumes:
+  sql_data:
+  minio_data:

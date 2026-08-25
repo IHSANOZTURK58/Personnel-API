@@ -85,7 +85,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
             var currentUserRole = User.FindFirstValue(ClaimTypes.Role);
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Manager sadece "Employee" rolünde kişi ekleyebilir.
+
             if (currentUserRole == "Manager" && request.RoleName != "Employee")
             {
                 return StatusCode(403, "Yetki Hatası: Yöneticiler (Manager) sadece Personel (Employee) ekleyebilir.");
