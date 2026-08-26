@@ -15,8 +15,8 @@ services:
   simfer-minio:
     image: minio/minio
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     ports:
       - "9005:9000"
@@ -33,6 +33,8 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Server=simfer-db;Database=SimferPersonnelDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
       - Minio__Endpoint=simfer-minio:9000
+      - Minio__AccessKey=${MINIO_ROOT_USER}
+      - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
     depends_on:
       - simfer-db
       - simfer-minio
