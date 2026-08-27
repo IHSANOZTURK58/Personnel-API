@@ -132,7 +132,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 Message = "Yeni kullanıcı sisteme başarıyla eklendi."
             });
         }
-
         [HttpDelete("delete-user/{id}")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> DeleteUser(int id)
@@ -156,14 +155,15 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return StatusCode(403, "Yetki Hatası: Yöneticiler (Manager) sadece Personel (Employee) silebilir.");
             }
 
-            _context.Users.Remove(userToDelete);
+            userToDelete.IsDeleted = true; 
 
             var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
             {
                 UserId = int.Parse(currentUserId),
                 ActionType = "Kullanıcı Silme",
-                Details = $"{userToDelete.FirstName} {userToDelete.LastName} ({userToDelete.Username}) adlı kullanıcı sistemden silindi."
+                Details = $"{userToDelete.FirstName} {userToDelete.LastName} ({userToDelete.Username}) adlı kullanıcı sistemden pasife alındı (Soft Delete)."
             };
+
             _context.UserHistories.Add(historyRecord);
 
             await _context.SaveChangesAsync();
@@ -171,7 +171,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
             return Ok(new
             {
                 Success = true,
-                Message = "Kullanıcı sistemden başarıyla silindi."
+                Message = "Kullanıcı sistemden başarıyla silindi (Pasife alındı)."
             });
         }
     }

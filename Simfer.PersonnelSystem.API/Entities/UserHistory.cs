@@ -6,6 +6,7 @@
         public int UserId { get; set; }
         public string ActionType { get; set; }
         public string Details { get; set; }
-        public DateTime ActionDate { get; set; } = DateTime.Now;
+        public virtual User User { get; set; }
+        public DateTime ActionDate { get; set; } = DateTime.Now.AddHours(3);
     }
 }

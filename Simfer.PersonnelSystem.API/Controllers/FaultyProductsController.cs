@@ -22,7 +22,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
             _minioService = minioService;
             _context = context;
         }
-
         [HttpPost("report-faulty-product")]
         [Authorize]
         public async Task<IActionResult> ReportFaultyProduct([FromForm] FaultyProductCreateDto request)
@@ -39,6 +38,15 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     return Unauthorized("Güvenlik İhlali: Geçerli bir kullanıcı kimliği bulunamadı.");
                 }
 
+                var doubleTapCheck = await _context.FaultyProducts
+                    .AnyAsync(x => x.BarcodeNumber == request.BarcodeNumber &&
+                                   x.CreatedDate > DateTime.UtcNow.AddHours(3).AddSeconds(-5));
+
+                if (doubleTapCheck)
+                {
+                    return BadRequest("Bu arıza kaydı az önce zaten oluşturuldu. Lütfen bekleyin.");
+                }
+
                 string generatedFileName = await _minioService.UploadFileAsync(request.File);
 
                 var newFaultyProduct = new FaultyProduct
@@ -47,14 +55,12 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     BarcodeNumber = request.BarcodeNumber,
                     DefectDescription = request.DefectDescription,
                     ImageFileName = generatedFileName,
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = DateTime.UtcNow.AddHours(3),
                     IsResolved = false,
-
                     UserId = parsedUserId
                 };
 
                 _context.FaultyProducts.Add(newFaultyProduct);
-                await _context.SaveChangesAsync();
 
                 var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
                 {
@@ -62,7 +68,9 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     ActionType = "Hatalı Ürün Kaydı",
                     Details = $"{request.BarcodeNumber} barkodlu '{request.ProductName}' hatalı ürün olarak sisteme eklendi."
                 };
+
                 _context.UserHistories.Add(historyRecord);
+
                 await _context.SaveChangesAsync();
 
                 return Ok(new
@@ -76,7 +84,34 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return StatusCode(500, $"Sunucu hatası: {ex.Message}");
             }
         }
+        [HttpPut("cozuldu-isaretle/{id}")]
+        public async Task<IActionResult> MarkAsResolved(int id)
+        {
+            var fault = await _context.FaultyProducts.FindAsync(id);
 
+            if (fault == null)
+                return NotFound("Arıza bulunamadı.");
+
+            fault.IsResolved = true;
+
+            var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+
+            if (!string.IsNullOrEmpty(currentUserId))
+            {
+                var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
+                {
+                    UserId = int.Parse(currentUserId),
+                    ActionType = "Arıza Çözümü",
+                    Details = $"'{fault.ProductName}' (Barkod: {fault.BarcodeNumber}) isimli üründeki arıza kaydı çözüldü olarak işaretlendi."
+                };
+
+                _context.UserHistories.Add(historyRecord);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Arıza çözüldü olarak işaretlendi!" });
+        }
         [HttpGet("get-image-url/{fileName}")]
         [Authorize] 
         public async Task<IActionResult> GetImageUrl(string fileName)
@@ -112,7 +147,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
         {
             try
             {
-                // Entity'yi doğrudan değil, sadece istediğimiz alanları seçerek (Select) arayüze gönderiyoruz:
                 var products = await _context.FaultyProducts
                     .Include(p => p.User)
                     .OrderByDescending(p => p.CreatedDate)
@@ -125,7 +159,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                         p.ImageFileName,
                         p.CreatedDate,
                         p.IsResolved,
-                        // Arayüze sadece personelin Ad ve Soyadını gönderiyoruz, şifre ve diğer detaylar gizli kalıyor:
                         ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor"
                     })
                     .ToListAsync();
