@@ -5,4 +5,4 @@
         public int Id { get; set; }
         public string ResolutionDetails { get; set; } = string.Empty;
     }
-}
+}   
