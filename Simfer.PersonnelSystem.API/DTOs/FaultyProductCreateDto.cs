@@ -16,5 +16,6 @@ namespace Simfer.PersonnelSystem.API.DTOs
 
         [Required(ErrorMessage = "Lütfen hatalı ürünün fotoğrafını ekleyin.")]
         public IFormFile File { get; set; }
+        public string FaultCategory { get; set; }
     }
 }

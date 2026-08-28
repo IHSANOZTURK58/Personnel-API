@@ -20,9 +20,12 @@ namespace Simfer.PersonnelSystem.API.Entities
         [Required(ErrorMessage = "Hata açıklaması zorunludur.")]
         [MaxLength(500)]
         public string DefectDescription { get; set; }
+        public string FaultCategory { get; set; }
 
         [Column(TypeName = "varchar(255)")]
         public string ImageFileName { get; set; }
+        public string? ResolutionDetails { get; set; }
+        public DateTime? ResolvedDate { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 

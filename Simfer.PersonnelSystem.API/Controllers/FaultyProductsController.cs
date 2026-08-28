@@ -57,7 +57,8 @@ namespace Simfer.PersonnelSystem.API.Controllers
                     ImageFileName = generatedFileName,
                     CreatedDate = DateTime.UtcNow.AddHours(3),
                     IsResolved = false,
-                    UserId = parsedUserId
+                    UserId = parsedUserId,
+                    FaultCategory = request.FaultCategory,
                 };
 
                 _context.FaultyProducts.Add(newFaultyProduct);
@@ -139,6 +140,28 @@ namespace Simfer.PersonnelSystem.API.Controllers
             {
                 return StatusCode(500, $"Sunucu hatası: {ex.Message}");
             }
+        }
+
+
+        [HttpPut("resolve")]
+        public async Task<IActionResult> ResolveFault([FromBody] FaultyProductResolveDto request)
+        {
+            var faultyProduct = await _context.FaultyProducts.FindAsync(request.Id);
+
+            if (faultyProduct == null)
+                return NotFound("Belirtilen arıza kaydı bulunamadı.");
+
+            if (faultyProduct.IsResolved)
+                return BadRequest("Bu arıza zaten çözülmüş olarak işaretlenmiş.");
+
+            faultyProduct.IsResolved = true;
+            faultyProduct.ResolutionDetails = request.ResolutionDetails;
+            faultyProduct.ResolvedDate = DateTime.Now;
+
+            _context.FaultyProducts.Update(faultyProduct);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Arıza başarıyla çözüldü ve detaylar sisteme kaydedildi." });
         }
 
         [HttpGet("get-all")]

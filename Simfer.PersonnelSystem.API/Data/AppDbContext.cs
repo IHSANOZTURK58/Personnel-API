@@ -11,6 +11,8 @@ namespace Simfer.PersonnelSystem.API.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
+        public DbSet<Product> Products { get; set; }
+        public DbSet<FaultCategory> FaultCategories { get; set; }
         public DbSet<UserHistory> UserHistories { get; set; }
         public DbSet<FaultyProduct> FaultyProducts { get; set; }
 

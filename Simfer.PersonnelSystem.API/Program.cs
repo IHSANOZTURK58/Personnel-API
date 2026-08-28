@@ -45,15 +45,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// ----- 2. GÜVENLÝK KONTROLLERÝNÝ AKTÝF ETME -----
 app.UseAuthentication(); 
 app.UseAuthorization(); 
 app.MapControllers();
-// ----- 3. OTOMATÝK VERÝTABANI OLUÞTURMA -----
-/*
+
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-}*/
+}
 app.Run();
