@@ -85,36 +85,9 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 return StatusCode(500, $"Sunucu hatası: {ex.Message}");
             }
         }
-        [HttpPut("cozuldu-isaretle/{id}")]
-        public async Task<IActionResult> MarkAsResolved(int id)
-        {
-            var fault = await _context.FaultyProducts.FindAsync(id);
-
-            if (fault == null)
-                return NotFound("Arıza bulunamadı.");
-
-            fault.IsResolved = true;
-
-            var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
-
-            if (!string.IsNullOrEmpty(currentUserId))
-            {
-                var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
-                {
-                    UserId = int.Parse(currentUserId),
-                    ActionType = "Arıza Çözümü",
-                    Details = $"'{fault.ProductName}' (Barkod: {fault.BarcodeNumber}) isimli üründeki arıza kaydı çözüldü olarak işaretlendi."
-                };
-
-                _context.UserHistories.Add(historyRecord);
-            }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { success = true, message = "Arıza çözüldü olarak işaretlendi!" });
-        }
+       
         [HttpGet("get-image-url/{fileName}")]
-        [Authorize] 
+        [Authorize]
         public async Task<IActionResult> GetImageUrl(string fileName)
         {
             try
@@ -143,6 +116,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
         }
 
 
+
         [HttpPut("resolve")]
         public async Task<IActionResult> ResolveFault([FromBody] FaultyProductResolveDto request)
         {
@@ -156,9 +130,23 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             faultyProduct.IsResolved = true;
             faultyProduct.ResolutionDetails = request.ResolutionDetails;
-            faultyProduct.ResolvedDate = DateTime.Now;
+            faultyProduct.ResolvedDate = DateTime.UtcNow.AddHours(3);
 
             _context.FaultyProducts.Update(faultyProduct);
+
+            var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out int parsedUserId))
+            {
+                var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
+                {
+                    UserId = parsedUserId,
+                    ActionType = "Arıza Çözümü",
+                    Details = $"'{faultyProduct.ProductName}' (Barkod: {faultyProduct.BarcodeNumber}) isimli arıza çözüldü. Çözüm Detayı: {request.ResolutionDetails}"
+                };
+
+                _context.UserHistories.Add(historyRecord);
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Arıza başarıyla çözüldü ve detaylar sisteme kaydedildi." });
@@ -173,17 +161,19 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 var products = await _context.FaultyProducts
                     .Include(p => p.User)
                     .OrderByDescending(p => p.CreatedDate)
-                    .Select(p => new
-                    {
-                        p.Id,
-                        p.ProductName,
-                        p.BarcodeNumber,
-                        p.DefectDescription,
-                        p.ImageFileName,
-                        p.CreatedDate,
-                        p.IsResolved,
-                        ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor"
-                    })
+                  .Select(p => new
+                  {
+                      p.Id,
+                      p.ProductName,
+                      p.BarcodeNumber,
+                      p.DefectDescription,
+                      p.ImageFileName,
+                      p.CreatedDate,
+                      p.IsResolved,
+                      p.ResolutionDetails,
+                      p.ResolvedDate,
+                      ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor"
+                  })
                     .ToListAsync();
 
                 var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
