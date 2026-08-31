@@ -22,7 +22,13 @@ services:
       - "9005:9000"
       - "9006:9001"
     volumes:
-      - minio_data:/data
+      - minio_data:/data 
+  redis:
+    image: redis:alpine
+    container_name: simfer-redis
+    ports:
+      - "6379:6379"
+    restart: always
 
   simfer-api:
     build: 
