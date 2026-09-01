@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Simfer.PersonnelSystem.API.Data;
 
@@ -11,9 +12,11 @@ using Simfer.PersonnelSystem.API.Data;
 namespace Simfer.PersonnelSystem.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260901122645_AddTableRelations")]
+    partial class AddTableRelations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,7 +39,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FaultCategories", (string)null);
+                    b.ToTable("FaultCategories");
                 });
 
             modelBuilder.Entity("Product", b =>
@@ -53,7 +56,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.FaultyProduct", b =>
@@ -107,7 +110,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("FaultyProducts", (string)null);
+                    b.ToTable("FaultyProducts");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.Role", b =>
@@ -124,7 +127,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.User", b =>
@@ -161,7 +164,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.UserHistory", b =>
@@ -190,7 +193,7 @@ namespace Simfer.PersonnelSystem.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserHistories", (string)null);
+                    b.ToTable("UserHistories");
                 });
 
             modelBuilder.Entity("Simfer.PersonnelSystem.API.Entities.FaultyProduct", b =>

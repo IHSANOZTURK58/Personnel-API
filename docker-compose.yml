@@ -38,7 +38,7 @@ services:
       - "8080:8080"
     environment:
       - ConnectionStrings__DefaultConnection=Server=simfer-db;Database=SimferPersonnelDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
-      - Minio__Endpoint=172.16.71.60:9005
+      - Minio__Endpoint=192.168.211.188:9005
       - Minio__AccessKey=${MINIO_ROOT_USER}
       - Minio__SecretKey=${MINIO_ROOT_PASSWORD}
     depends_on:

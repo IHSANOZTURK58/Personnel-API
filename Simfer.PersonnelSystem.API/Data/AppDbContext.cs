@@ -21,6 +21,18 @@ namespace Simfer.PersonnelSystem.API.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<User>().HasQueryFilter(u => !u.IsDeleted);
+
+            modelBuilder.Entity<FaultyProduct>()
+                .HasOne(f => f.Product)
+                .WithMany(p => p.FaultyProducts)
+                .HasForeignKey(f => f.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<FaultyProduct>()
+                .HasOne(f => f.FaultCategory)
+                .WithMany(c => c.FaultyProducts)
+                .HasForeignKey(f => f.FaultCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

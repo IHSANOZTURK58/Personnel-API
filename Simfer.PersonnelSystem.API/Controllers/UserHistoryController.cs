@@ -7,7 +7,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin, Manager")] // 🚀 Güvenlik: Sadece yetkililer görebilir!
+    [Authorize(Roles = "Admin, Manager")] 
     public class UserHistoryController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -23,17 +23,15 @@ namespace Simfer.PersonnelSystem.API.Controllers
             try
             {
                 var logs = await _context.UserHistories
-                    .Include(h => h.User) // Kullanıcı bilgilerini birleştir
-                    .IgnoreQueryFilters() // 🚀 SİHİR BURADA: Silinmiş personelleri de getir!
-                    .OrderByDescending(h => h.Id) // En son yapılan işlem en üstte görünsün
+                    .Include(h => h.User) 
+                    .IgnoreQueryFilters() 
+                    .OrderByDescending(h => h.Id) 
                     .Select(h => new
                     {
                         h.Id,
                         h.ActionType,
                         h.Details,
-                        // Tarih kolonunun adını sen ne yaptıysan (örn: CreatedAt, Date vs) buraya ekleyebilirsin
 
-                        // İşten çıkanın yanına "(Silinmiş/Pasif)" yazdıralım:
                         PersonnelName = h.User != null
                             ? $"{h.User.FirstName} {h.User.LastName} {(h.User.IsDeleted ? "(Silinmiş/Pasif)" : "")}"
                             : "Sistem / Bilinmeyen"
