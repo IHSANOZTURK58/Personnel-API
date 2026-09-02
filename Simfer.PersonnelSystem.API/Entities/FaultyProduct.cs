@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Net.Sockets;
 
 namespace Simfer.PersonnelSystem.API.Entities
 {
@@ -31,7 +32,13 @@ namespace Simfer.PersonnelSystem.API.Entities
 
         public int ProductId { get; set; }
         public Product Product { get; set; }
+
         public int FaultCategoryId { get; set; }
         public FaultCategory FaultCategory { get; set; }
+
+        public int? ResolvedByUserId { get; set; }
+
+        [ForeignKey("ResolvedByUserId")]
+        public User? ResolvedByUser { get; set; }
     }
 }

@@ -43,21 +43,23 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 var today = DateTime.UtcNow.AddHours(3).Date;
 
                 var myDailyFaults = await _context.FaultyProducts
-                    .Include(p => p.Product)      
-                    .Include(p => p.FaultCategory) 
+                    .Include(p => p.Product)
+                    .Include(p => p.FaultCategory)
+                    .Include(p => p.ResolvedByUser)
                     .Where(p => p.UserId == parsedUserId && p.CreatedDate.Date == today)
                     .OrderByDescending(p => p.CreatedDate)
                     .Select(p => new
                     {
                         p.Id,
-                        ProductName = p.Product.Name, 
+                        ProductName = p.Product.Name,
                         p.BarcodeNumber,
                         p.DefectDescription,
                         p.ImageFileName,
                         p.CreatedDate,
                         p.IsResolved,
                         p.ResolutionDetails,
-                        FaultCategory = p.FaultCategory.Name 
+                        FaultCategory = p.FaultCategory.Name,
+                        ResolvedByName = p.ResolvedByUser != null ? p.ResolvedByUser.FirstName + " " + p.ResolvedByUser.LastName : null
                     })
                     .ToListAsync();
 
@@ -98,8 +100,8 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
                 var newFaultyProduct = new FaultyProduct
                 {
-                    ProductId = request.ProductId,        
-                    FaultCategoryId = request.FaultCategoryId, 
+                    ProductId = request.ProductId,
+                    FaultCategoryId = request.FaultCategoryId,
                     BarcodeNumber = request.BarcodeNumber,
                     DefectDescription = request.DefectDescription,
                     ImageFileName = generatedFileName,
@@ -114,7 +116,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 {
                     UserId = parsedUserId,
                     ActionType = "Hatalı Ürün Kaydı",
-                    Details = $"{request.BarcodeNumber} barkodlu hatalı ürün sisteme eklendi." // DÜZELTİLDİ
+                    Details = $"{request.BarcodeNumber} barkodlu hatalı ürün sisteme eklendi."
                 };
 
                 _context.UserHistories.Add(historyRecord);
@@ -164,6 +166,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
         }
 
         [HttpPut("resolve")]
+        [Authorize]
         public async Task<IActionResult> ResolveFault([FromBody] FaultyProductResolveDto request)
         {
             var faultyProduct = await _context.FaultyProducts
@@ -176,25 +179,29 @@ namespace Simfer.PersonnelSystem.API.Controllers
             if (faultyProduct.IsResolved)
                 return BadRequest("Bu arıza zaten çözülmüş olarak işaretlenmiş.");
 
+            var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(currentUserIdStr, out int parsedUserId))
+            {
+                return Unauthorized("Güvenlik İhlali: Geçerli bir kullanıcı kimliği bulunamadı.");
+            }
+
             faultyProduct.IsResolved = true;
             faultyProduct.ResolutionDetails = request.ResolutionDetails;
             faultyProduct.ResolvedDate = DateTime.UtcNow.AddHours(3);
 
+            // DÜZELTME: Çözen kişinin ID'sini veritabanına işliyoruz
+            faultyProduct.ResolvedByUserId = parsedUserId;
+
             _context.FaultyProducts.Update(faultyProduct);
 
-            var currentUserId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out int parsedUserId))
+            var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
             {
-                var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
-                {
-                    UserId = parsedUserId,
-                    ActionType = "Arıza Çözümü",
+                UserId = parsedUserId,
+                ActionType = "Arıza Çözümü",
+                Details = $"'{faultyProduct.Product.Name}' (Barkod: {faultyProduct.BarcodeNumber}) isimli arıza çözüldü. Çözüm Detayı: {request.ResolutionDetails}"
+            };
 
-                    Details = $"'{faultyProduct.Product.Name}' (Barkod: {faultyProduct.BarcodeNumber}) isimli arıza çözüldü. Çözüm Detayı: {request.ResolutionDetails}"
-                };
-
-                _context.UserHistories.Add(historyRecord);
-            }
+            _context.UserHistories.Add(historyRecord);
 
             await _context.SaveChangesAsync();
             await _cache.RemoveAsync("faults_list");
@@ -221,13 +228,14 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 {
                     var products = await _context.FaultyProducts
                         .Include(p => p.User)
-                        .Include(p => p.Product)       // YENİ: Include Eklendi
-                        .Include(p => p.FaultCategory) // YENİ: Include Eklendi
+                        .Include(p => p.Product)
+                        .Include(p => p.FaultCategory)
+                        .Include(p => p.ResolvedByUser) // DÜZELTME: Yönetici paneli için çözen kişiyi de çektik
                         .OrderByDescending(p => p.CreatedDate)
                       .Select(p => new
                       {
                           p.Id,
-                          ProductName = p.Product.Name, // DÜZELTİLDİ
+                          ProductName = p.Product.Name,
                           p.BarcodeNumber,
                           p.DefectDescription,
                           p.ImageFileName,
@@ -236,7 +244,9 @@ namespace Simfer.PersonnelSystem.API.Controllers
                           p.ResolutionDetails,
                           p.ResolvedDate,
                           ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor",
-                          FaultCategory = p.FaultCategory.Name // EKSİKTİ, EKLENDİ
+                          FaultCategory = p.FaultCategory.Name,
+                          // DÜZELTME: Çözen kişiyi yöneticiye de gösteriyoruz
+                          ResolvedByName = p.ResolvedByUser != null ? p.ResolvedByUser.FirstName + " " + p.ResolvedByUser.LastName : null
                       })
                         .ToListAsync();
 

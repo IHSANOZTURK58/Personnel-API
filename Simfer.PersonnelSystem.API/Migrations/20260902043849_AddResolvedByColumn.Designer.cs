@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Simfer.PersonnelSystem.API.Data;
 
@@ -11,9 +12,11 @@ using Simfer.PersonnelSystem.API.Data;
 namespace Simfer.PersonnelSystem.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902043849_AddResolvedByColumn")]
+    partial class AddResolvedByColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -98,9 +101,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                     b.Property<string>("ResolutionDetails")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("ResolvedByUserId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("ResolvedDate")
                         .HasColumnType("datetime2");
 
@@ -112,8 +112,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                     b.HasIndex("FaultCategoryId");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("ResolvedByUserId");
 
                     b.HasIndex("UserId");
 
@@ -226,10 +224,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Simfer.PersonnelSystem.API.Entities.User", "ResolvedByUser")
-                        .WithMany()
-                        .HasForeignKey("ResolvedByUserId");
-
                     b.HasOne("Simfer.PersonnelSystem.API.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -239,8 +233,6 @@ namespace Simfer.PersonnelSystem.API.Migrations
                     b.Navigation("FaultCategory");
 
                     b.Navigation("Product");
-
-                    b.Navigation("ResolvedByUser");
 
                     b.Navigation("User");
                 });
