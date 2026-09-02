@@ -39,7 +39,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 new Claim("Username", user.Username),
                 new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
             };
-
+            
             if (user.Role != null)
             {
                 claims.Add(new Claim(ClaimTypes.Role, user.Role.Name));

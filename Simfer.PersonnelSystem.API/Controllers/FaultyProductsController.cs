@@ -189,7 +189,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
             faultyProduct.ResolutionDetails = request.ResolutionDetails;
             faultyProduct.ResolvedDate = DateTime.UtcNow.AddHours(3);
 
-            // DÜZELTME: Çözen kişinin ID'sini veritabanına işliyoruz
             faultyProduct.ResolvedByUserId = parsedUserId;
 
             _context.FaultyProducts.Update(faultyProduct);
@@ -208,7 +207,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             return Ok(new { message = "Arıza başarıyla çözüldü ve detaylar sisteme kaydedildi." });
         }
-
+        [HttpPost]
         [HttpGet("get-all")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> GetAllFaultyProducts()
@@ -230,7 +229,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
                         .Include(p => p.User)
                         .Include(p => p.Product)
                         .Include(p => p.FaultCategory)
-                        .Include(p => p.ResolvedByUser) // DÜZELTME: Yönetici paneli için çözen kişiyi de çektik
+                        .Include(p => p.ResolvedByUser)
                         .OrderByDescending(p => p.CreatedDate)
                       .Select(p => new
                       {
@@ -245,7 +244,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
                           p.ResolvedDate,
                           ReporterName = p.User != null ? $"{p.User.FirstName} {p.User.LastName}" : "Bilinmiyor",
                           FaultCategory = p.FaultCategory.Name,
-                          // DÜZELTME: Çözen kişiyi yöneticiye de gösteriyoruz
                           ResolvedByName = p.ResolvedByUser != null ? p.ResolvedByUser.FirstName + " " + p.ResolvedByUser.LastName : null
                       })
                         .ToListAsync();
