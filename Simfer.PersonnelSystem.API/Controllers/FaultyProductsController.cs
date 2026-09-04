@@ -9,6 +9,7 @@ using Simfer.PersonnelSystem.API.Services;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
+using ClosedXML.Excel;
 
 namespace Simfer.PersonnelSystem.API.Controllers
 {
@@ -188,7 +189,6 @@ namespace Simfer.PersonnelSystem.API.Controllers
             faultyProduct.IsResolved = true;
             faultyProduct.ResolutionDetails = request.ResolutionDetails;
             faultyProduct.ResolvedDate = DateTime.UtcNow.AddHours(3);
-
             faultyProduct.ResolvedByUserId = parsedUserId;
 
             _context.FaultyProducts.Update(faultyProduct);
@@ -207,7 +207,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
 
             return Ok(new { message = "Arıza başarıyla çözüldü ve detaylar sisteme kaydedildi." });
         }
-        [HttpPost]
+
         [HttpGet("get-all")]
         [Authorize(Roles = "Admin, Manager")]
         public async Task<IActionResult> GetAllFaultyProducts()
@@ -226,6 +226,7 @@ namespace Simfer.PersonnelSystem.API.Controllers
                 else
                 {
                     var products = await _context.FaultyProducts
+                        .IgnoreQueryFilters()
                         .Include(p => p.User)
                         .Include(p => p.Product)
                         .Include(p => p.FaultCategory)
@@ -275,6 +276,109 @@ namespace Simfer.PersonnelSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, $"Sunucu hatası: {ex.Message}");
+            }
+        }
+
+        [HttpGet("faulty-products-excel")]
+        [Authorize(Roles = "Admin, Manager")]
+        public async Task<IActionResult> ExportFaultyProductsToExcel(
+    [FromQuery] string tab = "bekleyen",
+    [FromQuery] string search = "",
+    [FromQuery] string category = "Tümü",
+    [FromQuery] string product = "Tümü",
+    [FromQuery] string time = "tumu",
+    [FromQuery] DateTime? startDate = null,
+    [FromQuery] DateTime? endDate = null)
+        {
+            var query = _context.FaultyProducts
+                .IgnoreQueryFilters()
+                .Include(p => p.Product)
+                .Include(p => p.User)
+                .Include(p => p.FaultCategory)
+                .Include(p => p.ResolvedByUser)
+                .AsQueryable();
+
+            if (tab == "bekleyen") query = query.Where(q => !q.IsResolved);
+            else if (tab == "cozulen") query = query.Where(q => q.IsResolved);
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(q => q.BarcodeNumber.Contains(search));
+            }
+
+            if (!string.IsNullOrEmpty(product) && product != "Tümü")
+            {
+                query = query.Where(q => q.Product.Name == product);
+            }
+
+            if (!string.IsNullOrEmpty(category) && category != "Tümü")
+            {
+                query = query.Where(q => q.FaultCategory.Name == category);
+            }
+
+            var now = DateTime.UtcNow.AddHours(3);
+            if (time == "7gun") query = query.Where(q => q.CreatedDate >= now.AddDays(-7));
+            else if (time == "1ay") query = query.Where(q => q.CreatedDate >= now.AddMonths(-1));
+            else if (time == "6ay") query = query.Where(q => q.CreatedDate >= now.AddMonths(-6));
+            else if (time == "ozel" && startDate.HasValue && endDate.HasValue)
+            {
+                var endOfDay = endDate.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(q => q.CreatedDate >= startDate.Value.Date && q.CreatedDate <= endOfDay);
+            }
+
+            var faults = await query
+                .OrderByDescending(p => p.CreatedDate)
+                .Select(f => new
+                {
+                    Ürün_Adı = f.Product != null ? f.Product.Name : "Bilinmiyor",
+                    Barkod_Numarası = f.BarcodeNumber,
+                    Kategori = f.FaultCategory != null ? f.FaultCategory.Name : "Belirtilmemiş",
+                    Arıza_Detayı = f.DefectDescription,
+                    Durum = f.IsResolved ? "Çözüldü" : "Bekliyor",
+                    Bildiren_Personel = f.User != null ? f.User.FirstName + " " + f.User.LastName : "Bilinmeyen Personel",
+                    Kayıt_Tarihi = f.CreatedDate.ToString("dd.MM.yyyy HH:mm"),
+                    Çözüm_Detayı = f.IsResolved && f.ResolutionDetails != null ? f.ResolutionDetails : "-",
+                    Çözen_Personel = f.ResolvedByUser != null ? f.ResolvedByUser.FirstName + " " + f.ResolvedByUser.LastName : "-",
+                    Çözüm_Tarihi = f.ResolvedDate != null ? f.ResolvedDate.Value.ToString("dd.MM.yyyy HH:mm") : "-"
+                    
+                })
+                .ToListAsync();
+            try
+            {
+                var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                                ?? User.FindFirst("nameid")?.Value;
+
+                if (int.TryParse(userIdString, out int parsedUserId))
+                {
+                    var currentUser = await _context.Users.FindAsync(parsedUserId);
+                    string fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Bilinmeyen Personel";
+
+                    var historyRecord = new Simfer.PersonnelSystem.API.Entities.UserHistory
+                    {
+                        UserId = parsedUserId,
+                        ActionType = "Filtreli Excel Dışa Aktarım",
+                        Details = $"{fullName}, arıza listesini Excel olarak indirdi. (Filtreler -> Ürün: {product}, Kategori: {category}, Zaman: {time})"
+                    };
+
+                    _context.UserHistories.Add(historyRecord);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch { }
+
+            using (var workbook = new ClosedXML.Excel.XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Arıza Raporu");
+                worksheet.Cell("A1").InsertTable(faults);
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return File(stream.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "Simfer_Ariza_Raporu.xlsx");
+                }
             }
         }
     }

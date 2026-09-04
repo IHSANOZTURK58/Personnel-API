@@ -40,6 +40,7 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddScoped<MinioService>();
 
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -57,6 +58,13 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch (Exception)
+    {
+        Console.WriteLine("Veritabaný zaten mevcut, atlanýyor...");
+    }
 }
 app.Run();

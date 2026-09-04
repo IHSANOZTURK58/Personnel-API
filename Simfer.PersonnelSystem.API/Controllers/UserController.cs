@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Simfer.PersonnelSystem.API.Data;
 using System.Security.Claims;
 using Simfer.PersonnelSystem.API.DTOs;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace Simfer.PersonnelSystem.API.Controllers
 {
@@ -18,6 +20,8 @@ namespace Simfer.PersonnelSystem.API.Controllers
         {
             _context = context;
         }
+
+       
 
         [HttpGet("profil")]
         [Authorize]
@@ -86,10 +90,10 @@ namespace Simfer.PersonnelSystem.API.Controllers
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
 
-            if (currentUserRole == "Manager" && request.RoleName != "Employee")
+            if (currentUserRole == "Manager" && request.RoleName != "Worker")
             {
-                return StatusCode(403, "Yetki Hatası: Yöneticiler (Manager) sadece Personel (Employee) ekleyebilir.");
-            }
+                return StatusCode(403, "Yetki Hatası: Yöneticiler sadece Personel ekleyebilir.");
+            }   
 
             var userExists = await _context.Users.AnyAsync(u => u.Username == request.Username);
             if (userExists)
