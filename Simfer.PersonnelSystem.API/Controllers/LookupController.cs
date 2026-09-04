@@ -23,7 +23,6 @@ public class LookupController : ControllerBase
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
     {
-        // 1. Sadece ID ve Name alanlarını seçerek JSON döngü krizini kökünden çözüyoruz.
         var categories = await _context.FaultCategories
             .Select(c => new
             {
@@ -32,7 +31,6 @@ public class LookupController : ControllerBase
             })
             .ToListAsync();
 
-        // 2. React Native'in doğrudan okuyabilmesi için kabuksuz, saf listeyi döndürüyoruz.
         return Ok(categories);
     }
 }
